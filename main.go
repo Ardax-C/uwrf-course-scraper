@@ -62,22 +62,27 @@ func main() {
 
 		// State variables
 		var currentSection models.Section
-		isCollectingSectionData := false
+		var isCollectingSectionData bool
 
-		// Extracting Sections for detailed format
 		e.ForEach("table tr", func(i int, el *colly.HTMLElement) {
-			if el.Text == "" && isCollectingSectionData {
-				// End of current section
-				course.Sections = append(course.Sections, currentSection)
-				currentSection = models.Section{}
-				isCollectingSectionData = false
+			if el.Text == "" {
+				if isCollectingSectionData {
+					// End of current section
+					course.Sections = append(course.Sections, currentSection)
+					currentSection = models.Section{}
+					isCollectingSectionData = false
+				}
 			} else {
 				el.DOM.Find("td.text-right.bold").Each(func(_ int, s *goquery.Selection) {
 					label := strings.TrimSpace(s.Text())
 					value := strings.TrimSpace(s.Next().Text())
 
-					// Start collecting data if 'Section' is found
 					if label == "Section" {
+						if isCollectingSectionData {
+							// Append the previous section before starting a new one
+							course.Sections = append(course.Sections, currentSection)
+							currentSection = models.Section{}
+						}
 						isCollectingSectionData = true
 					}
 
