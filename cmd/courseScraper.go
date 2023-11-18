@@ -1,10 +1,11 @@
-package utils
+package cmd
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/Ardax-C/uwrf-course-scraper/models"
+	"github.com/Ardax-C/uwrf-course-scraper/utils"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
 )
@@ -26,7 +27,7 @@ func ScrapeCoursePage(link string) (models.CourseListing, error) {
 				course.Subject = s.Find("td").Eq(0).Text()
 				course.CatalogNum = s.Find("td").Eq(1).Text()
 				course.Title = s.Find("td").Eq(2).Text()
-				course.Credits = CleanString(s.Find("td").Eq(3).Text())
+				course.Credits = utils.CleanString(s.Find("td").Eq(3).Text())
 			} else if i == 2 {
 				// Extract course description
 				course.Description = s.Find("td").Eq(0).Text()
@@ -72,7 +73,7 @@ func ScrapeCoursePage(link string) (models.CourseListing, error) {
 					}
 
 					if ptr, ok := fieldMap[label]; ok {
-						*ptr = CleanString(value)
+						*ptr = utils.CleanString(value)
 					}
 				})
 			}
