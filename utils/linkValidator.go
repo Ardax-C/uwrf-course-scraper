@@ -2,6 +2,6 @@ package utils
 
 import "strings"
 
-func isValidLink(link string) bool {
+func IsValidLink(link string) bool {
 	return strings.Contains(link, "courseLightbox.cfm?subject=CIDS")
 }
