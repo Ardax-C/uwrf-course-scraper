@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func cleanString(str string) string {
+func CleanString(str string) string {
 	// Replace all newline and tab characters with a space
 	str = strings.ReplaceAll(str, "\n", " ")
 	str = strings.ReplaceAll(str, "\t", " ")
