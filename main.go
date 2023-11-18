@@ -6,7 +6,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Ardax-C/uwrf-course-scraper/cmd"
 	"github.com/Ardax-C/uwrf-course-scraper/models"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
 )
 
@@ -15,7 +17,7 @@ func main() {
 		colly.AllowedDomains("www.uwrf.edu"),
 	)
 
-	var classes []models.ClassDetails
+	var classes []models.Course
 
 	c.OnHTML("a.colorbox[href]", func(e *colly.HTMLElement) {
 		originalLink := e.Attr("href")
@@ -40,19 +42,84 @@ func main() {
 	})
 
 	c.OnHTML("div#classSchedule", func(e *colly.HTMLElement) {
-		var classDetails models.ClassDetails
+		var course models.Course
 
-		e.ForEach("table tr.tr-background", func(i int, el *colly.HTMLElement) {
-			if i == 1 {
-				classDetails.Subject = el.ChildText("td:nth-child(1)")
-				classDetails.CatalogNum = strings.TrimSpace(el.ChildText("td:nth-child(2)"))
-				classDetails.Title = el.ChildText("td:nth-child(3)")
+		// Assuming the first row contains basic class information
+		e.DOM.Find("table").First().Find("tr").Each(func(i int, s *goquery.Selection) {
+			if i == 0 { // Skip the header
+				return
+			} else if i == 1 {
+				// Extract basic course information
+				course.Subject = s.Find("td").Eq(0).Text()
+				course.CatalogNum = s.Find("td").Eq(1).Text()
+				course.Title = s.Find("td").Eq(2).Text()
+				course.Credits = cmd.CleanString(s.Find("td").Eq(3).Text())
+			} else if i == 2 {
+				// Extract course description
+				course.Description = s.Find("td").Eq(0).Text()
 			}
 		})
 
-		classDetails.Description = e.ChildText("table tr:nth-child(3) td[colspan='3']")
+		// State variables
+		var currentSection models.Section
+		isCollectingSectionData := false
 
-		classes = append(classes, classDetails)
+		// Extracting Sections for detailed format
+		e.ForEach("table tr", func(i int, el *colly.HTMLElement) {
+			if el.Text == "" && isCollectingSectionData {
+				// End of current section
+				course.Sections = append(course.Sections, currentSection)
+				currentSection = models.Section{}
+				isCollectingSectionData = false
+			} else {
+				el.DOM.Find("td.text-right.bold").Each(func(_ int, s *goquery.Selection) {
+					label := strings.TrimSpace(s.Text())
+					value := strings.TrimSpace(s.Next().Text())
+
+					// Start collecting data if 'Section' is found
+					if label == "Section" {
+						isCollectingSectionData = true
+					}
+
+					if isCollectingSectionData {
+						switch label {
+						case "Section":
+							currentSection.SectionNum = cmd.CleanString(value)
+						case "Class Number":
+							currentSection.ClassNumber = cmd.CleanString(value)
+						case "Term":
+							currentSection.Term = cmd.CleanString(value)
+						case "Status":
+							currentSection.Status = cmd.CleanString(value)
+						case "Dates":
+							currentSection.Dates = cmd.CleanString(value)
+						case "Topic":
+							currentSection.Topic = cmd.CleanString(value)
+						case "Time":
+							currentSection.Time = cmd.CleanString(value)
+						case "Instructor":
+							currentSection.Instructor = cmd.CleanString(value)
+						case "Enrolled":
+							currentSection.Enrolled = cmd.CleanString(value)
+						case "Room":
+							currentSection.Room = cmd.CleanString(value)
+						case "Notes":
+							currentSection.Notes = cmd.CleanString(value)
+						}
+					}
+				})
+			}
+		})
+
+		// Append the last section if it exists
+		if isCollectingSectionData {
+			course.Sections = append(course.Sections, currentSection)
+		}
+
+		// Append the course only if it has valid data
+		if course.Subject != "" || course.CatalogNum != "" {
+			classes = append(classes, course)
+		}
 	})
 
 	c.OnRequest(func(r *colly.Request) {
