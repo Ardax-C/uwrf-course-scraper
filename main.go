@@ -6,25 +6,18 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Ardax-C/uwrf-course-scraper/models"
 	"github.com/gocolly/colly"
 )
 
 // ClassDetails holds information about a class
-type ClassDetails struct {
-	Subject     string
-	CatalogNum  string
-	Title       string
-	Credits     string
-	Description string
-	// Additional fields like Term, Instructor, etc. can be added as needed
-}
 
 func main() {
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.uwrf.edu"),
 	)
 
-	var classes []ClassDetails
+	var classes []models.ClassDetails
 
 	c.OnHTML("a.colorbox[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
@@ -34,7 +27,7 @@ func main() {
 	})
 
 	c.OnHTML("div#classSchedule", func(e *colly.HTMLElement) {
-		var classDetails ClassDetails
+		var classDetails models.ClassDetails
 		e.ForEach("table tr", func(_ int, el *colly.HTMLElement) {
 			switch el.ChildText("td:nth-child(1)") {
 			case "Subject":
