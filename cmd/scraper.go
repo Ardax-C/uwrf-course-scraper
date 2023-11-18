@@ -41,7 +41,7 @@ func Init() {
 				defer wg.Done()
 				defer func() { <-semaphore }()
 
-				course, err := utils.ScrapeCoursePage(link)
+				course, err := ScrapeCoursePage(link)
 				if err != nil {
 					fmt.Println("Error scraping:", link, "Error:", err)
 					return
