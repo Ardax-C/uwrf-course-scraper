@@ -2,6 +2,9 @@
 
 Simple web scraper written in go. 
 
+Professor in CIDS Discord asked for an app that scrapped this [page](https://www.uwrf.edu/ClassSchedule/DepartmentCourses.cfm?subject=CIDS)
+and returned all data in json format. 
+
 ### How to Use
 1. Clone the repository to your local environment
 
