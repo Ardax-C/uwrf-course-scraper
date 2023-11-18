@@ -12,4 +12,4 @@ Simple web scraper written in go.
 
 When finished, you should have a file in the root directory called ```classes.json``` and it should have data like this:
 
-![sample json data]("./images/sampleJSON.png")
+![sample json data](./images/sampleJSON.png)
