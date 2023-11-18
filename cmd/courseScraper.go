@@ -10,6 +10,8 @@ import (
 	"github.com/gocolly/colly"
 )
 
+var noContentLinks []string
+
 func ScrapeCoursePage(link string) (models.CourseListing, error) {
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.uwrf.edu"),
@@ -18,21 +20,25 @@ func ScrapeCoursePage(link string) (models.CourseListing, error) {
 	var course models.CourseListing
 	var currentSection models.Section
 	var isCollectingSectionData bool
+	var hasValidCourseInfo bool = false
 
-	// Parsing main course information
 	c.OnHTML("div#classSchedule", func(e *colly.HTMLElement) {
-		// Assuming the first row contains subject, catalog number, title, and credits
-		e.DOM.Find("table").First().Find("tr").Each(func(i int, s *goquery.Selection) {
-			if i == 1 { // Skip the header, start with second row
-				course.Subject = s.Find("td").Eq(0).Text()
-				course.CatalogNum = s.Find("td").Eq(1).Text()
-				course.Title = s.Find("td").Eq(2).Text()
-				course.Credits = utils.CleanString(s.Find("td").Eq(3).Text())
-			} else if i == 2 {
-				// Extract course description
-				course.Description = s.Find("td").Eq(0).Text()
-			}
-		})
+		if e.DOM.Find("table").Length() > 0 {
+			hasValidCourseInfo = true
+
+			// Parsing main course information
+			e.DOM.Find("table").First().Find("tr").Each(func(i int, s *goquery.Selection) {
+				if i == 1 { // Skip the header, start with second row
+					course.Subject = s.Find("td").Eq(0).Text()
+					course.CatalogNum = s.Find("td").Eq(1).Text()
+					course.Title = s.Find("td").Eq(2).Text()
+					course.Credits = utils.CleanString(s.Find("td").Eq(3).Text())
+				} else if i == 2 {
+					// Extract course description
+					course.Description = s.Find("td").Eq(0).Text()
+				}
+			})
+		}
 	})
 
 	c.OnHTML("table", func(e *colly.HTMLElement) {
@@ -90,6 +96,14 @@ func ScrapeCoursePage(link string) (models.CourseListing, error) {
 	})
 
 	c.Visit(link)
+
+	if !hasValidCourseInfo {
+		// Instead of returning an error, record the link
+		noContentLinks = append(noContentLinks, link)
+		return models.CourseListing{}, nil // Return nil error to continue scraping other pages
+	}
+
+	utils.SaveNoContentLinksToFile(noContentLinks, "noContentLinks.json")
 
 	return course, nil
 }
