@@ -44,30 +44,39 @@ func main() {
 	c.OnHTML("div#classSchedule", func(e *colly.HTMLElement) {
 		var course models.Course
 
-		// Assuming the first row contains basic class information
 		e.DOM.Find("table").First().Find("tr").Each(func(i int, s *goquery.Selection) {
-			if i == 0 { // Skip the header
+			if i == 0 {
 				return
 			} else if i == 1 {
-				// Extract basic course information
 				course.Subject = s.Find("td").Eq(0).Text()
 				course.CatalogNum = s.Find("td").Eq(1).Text()
 				course.Title = s.Find("td").Eq(2).Text()
 				course.Credits = cmd.CleanString(s.Find("td").Eq(3).Text())
 			} else if i == 2 {
-				// Extract course description
 				course.Description = s.Find("td").Eq(0).Text()
 			}
 		})
 
-		// State variables
 		var currentSection models.Section
 		var isCollectingSectionData bool
+
+		fieldMap := map[string]*string{
+			"Section":      &currentSection.SectionNum,
+			"Class Number": &currentSection.ClassNumber,
+			"Term":         &currentSection.Term,
+			"Status":       &currentSection.Status,
+			"Dates":        &currentSection.Dates,
+			"Topic":        &currentSection.Topic,
+			"Time":         &currentSection.Time,
+			"Instructor":   &currentSection.Instructor,
+			"Enrolled":     &currentSection.Enrolled,
+			"Room":         &currentSection.Room,
+			"Notes":        &currentSection.Notes,
+		}
 
 		e.ForEach("table tr", func(i int, el *colly.HTMLElement) {
 			if el.Text == "" {
 				if isCollectingSectionData {
-					// End of current section
 					course.Sections = append(course.Sections, currentSection)
 					currentSection = models.Section{}
 					isCollectingSectionData = false
@@ -79,49 +88,23 @@ func main() {
 
 					if label == "Section" {
 						if isCollectingSectionData {
-							// Append the previous section before starting a new one
 							course.Sections = append(course.Sections, currentSection)
 							currentSection = models.Section{}
 						}
 						isCollectingSectionData = true
 					}
 
-					if isCollectingSectionData {
-						switch label {
-						case "Section":
-							currentSection.SectionNum = cmd.CleanString(value)
-						case "Class Number":
-							currentSection.ClassNumber = cmd.CleanString(value)
-						case "Term":
-							currentSection.Term = cmd.CleanString(value)
-						case "Status":
-							currentSection.Status = cmd.CleanString(value)
-						case "Dates":
-							currentSection.Dates = cmd.CleanString(value)
-						case "Topic":
-							currentSection.Topic = cmd.CleanString(value)
-						case "Time":
-							currentSection.Time = cmd.CleanString(value)
-						case "Instructor":
-							currentSection.Instructor = cmd.CleanString(value)
-						case "Enrolled":
-							currentSection.Enrolled = cmd.CleanString(value)
-						case "Room":
-							currentSection.Room = cmd.CleanString(value)
-						case "Notes":
-							currentSection.Notes = cmd.CleanString(value)
-						}
+					if ptr, ok := fieldMap[label]; ok {
+						*ptr = cmd.CleanString(value)
 					}
 				})
 			}
 		})
 
-		// Append the last section if it exists
 		if isCollectingSectionData {
 			course.Sections = append(course.Sections, currentSection)
 		}
 
-		// Append the course only if it has valid data
 		if course.Subject != "" || course.CatalogNum != "" {
 			classes = append(classes, course)
 		}
